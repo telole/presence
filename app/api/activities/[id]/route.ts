@@ -5,13 +5,13 @@ import { handleApiError, requireAuth } from '../../../../lib/apiAuth';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 
 type RouteContext = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export async function GET(req: NextRequest, { params }: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
-    const { id } = params;
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('activities')
@@ -30,10 +30,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: RouteContext) {
+export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
     const payload = await req.json();
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('activities')
@@ -44,7 +45,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
         kegiatan: payload.kegiatan,
         catatan: payload.catatan,
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('profile_id', user.id)
       .select('*')
       .single();
@@ -59,14 +60,15 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
+    const { id } = await context.params;
 
     const { error } = await supabaseAdmin
       .from('activities')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('profile_id', user.id);
 
     if (error) {

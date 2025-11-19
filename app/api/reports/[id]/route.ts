@@ -5,17 +5,18 @@ import { handleApiError, requireAuth } from '../../../../lib/apiAuth';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 
 type RouteContext = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export async function GET(req: NextRequest, { params }: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('reports')
       .select('*, report_history(*)')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('profile_id', user.id)
       .single();
 
@@ -29,10 +30,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: RouteContext) {
+export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
     const payload = await req.json();
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('reports')
@@ -43,7 +45,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
         status: payload.status,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('profile_id', user.id)
       .select('*')
       .single();
@@ -53,7 +55,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     }
 
     await supabaseAdmin.from('report_history').insert({
-      report_id: params.id,
+      report_id: id,
       editor_id: user.id,
       isi: data.isi,
       status: data.status,
@@ -65,14 +67,15 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const user = await requireAuth(req);
+    const { id } = await context.params;
 
     const { error } = await supabaseAdmin
       .from('reports')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('profile_id', user.id);
 
     if (error) {
